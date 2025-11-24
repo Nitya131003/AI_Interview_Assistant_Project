@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Push to Speak</title>
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: sans-serif;
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    #speakBtn {
+      background: #22d3ee;
+      color: #0f172a;
+      border: none;
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+    #speakBtn.recording {
+      background: #f43f5e;
+      transform: scale(1.1);
+      color: white;
+    }
+    #status {
+      margin-top: 20px;
+      font-size: 16px;
+      opacity: 0.85;
+    }
+    #speedControl {
+      margin-top: 15px;
+      background: #22d3ee;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 15px;
+      color: #0f172a;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button id="speakBtn">Hold to Speak</button>
+  <div id="status">Idle</div>
+
+  <!-- Playback speed selector -->
+  <select id="speedControl">
+    <option value="0.75">0.75×</option>
+    <option value="1" selected>1× (Normal)</option>
+    <option value="1.25">1.25×</option>
+    <option value="1.5">1.5×</option>
+    <option value="2">2×</option>
+  </select>
+
+<script>
+  const btn = document.getElementById('speakBtn');
+  const status = document.getElementById('status');
+  const speedControl = document.getElementById('speedControl');
+
+  let mediaRecorder, audioChunks = [];
+  let currentAudio = null;
+
+  async function initRecorder() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = uploadAudio;
+  }
+
+  async function startRecording() {
+    if (!mediaRecorder) await initRecorder();
+    audioChunks = [];
+    mediaRecorder.start();
+    btn.classList.add('recording');
+    status.textContent = 'Recording...';
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      btn.classList.remove('recording');
+      status.textContent = 'Processing...';
+    }
+  }
+
+  async function uploadAudio() {
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    const form = new FormData();
+    form.append('audio', blob, 'voice.webm');
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json();
+
+      const url = (data.tts_file.startsWith('/') ? data.tts_file : '/' + data.tts_file) + '?t=' + Date.now();
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.src = '';
+      }
+      currentAudio = new Audio(url);
+      currentAudio.playbackRate = parseFloat(speedControl.value);
+      currentAudio.onplaying = () => (status.textContent = 'Assistant speaking...');
+      currentAudio.onended = () => (status.textContent = 'Idle');
+      currentAudio.onerror = () => (status.textContent = 'Audio error');
+      await currentAudio.play();
+    } catch (err) {
+      console.error(err);
+      status.textContent = 'Upload failed';
+    }
+  }
+
+  // update speed live if changed while playing
+  speedControl.addEventListener('change', () => {
+    if (currentAudio) {
+      currentAudio.playbackRate = parseFloat(speedControl.value);
+    }
+  });
+
+  btn.addEventListener('mousedown', startRecording);
+  btn.addEventListener('mouseup', stopRecording);
+  btn.addEventListener('mouseleave', stopRecording);
+  btn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+  btn.addEventListener('touchend', e => { e.preventDefault(); stopRecording(); });
+</script>
+</body>
+</html>
