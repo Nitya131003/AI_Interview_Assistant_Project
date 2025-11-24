@@ -76,7 +76,7 @@ Before you begin, ensure you have the following installed:
 
 ### Step 1: Clone the Repository
 \\\`bash
-git clone https://github.com/Nitya131003/Interview_AI_Assistant.git
+git clone https://github.com/Nitya131003/AI_Interview_Assistant_Project.git
 cd AI-INTERVIEW
 \\\`
 
@@ -286,15 +286,5 @@ CORS is already enabled in the Flask app. If issues persist, verify that the fro
 
 ### Old TTS Files Playing
 The application automatically removes old TTS files to ensure fresh responses. If issues persist, manually delete voice/assistant_response.mp3.
-
-## 🤝 Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork the repository
-2. Create a feature branch (git checkout -b feature/AmazingFeature)
-3. Commit your changes (git commit -m 'Add some AmazingFeature')
-4. Push to the branch (git push origin feature/AmazingFeature)
-5. Open a Pull Request
 
 ---
